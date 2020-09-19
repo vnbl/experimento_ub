@@ -60,7 +60,7 @@ raw_grades_dret  = pd.read_csv("data/grades_dret_2009-2015.csv", index_col=0)
 
 ##### Filtramos los datos
 
-def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, gt=11, fill="row"):
+def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, fill="row"):
     ''' Pivots raw datasets and cleans / fills missing data, returns tuple of filtered, all and filled'''
     _grades = grades.copy()
     _grades_all = _grades.copy() #si usamos el método tradicional para asignar, se modifica el dato original, por eso usamos copy()
@@ -140,7 +140,7 @@ plt.scatter(_x, _z, color="orange", alpha=.6)
 plt.legend(['2nd year', '3rd year'])
 
 # for x,(y,z) in zip(_x, zip(_y, _z)):
-#     plt.plot([x, z], [y, z], alpha=0.1)
+#      plt.plot([x, z], [y, z], alpha=0.1)
 
 plt.plot([0,10],[0,10], color="black", alpha=.3)
 plt.plot([0,10],[5,5], color="red", alpha=.3)
@@ -151,7 +151,7 @@ ax1.add_patch(
         (0, 0), 5, 5, color="red", alpha=0.05
     )
 )
-# plt.axhspan(0,5, color='red', alpha=0.05)
+plt.axhspan(0,5, color='red', alpha=0.05)
 
 
 # plt.figure(figsize=[7,7])
@@ -162,3 +162,223 @@ ax1.add_patch(
 
 # plt.figure(figsize=[16,8])
 # sns.violinplot(data=cs_grades_all.iloc[:,20:30])
+
+
+############ Funciones de ayuda
+
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import LeaveOneOut
+from sklearn import metrics
+
+def train_and_predict(model, X_train, Y_train, X_test, Y_test):
+    columns = Y_test.columns
+    
+    Y_pred = pd.DataFrame(index=Y_test.index)
+    
+    for subject in columns:
+        subject = [subject]
+        model.fit(X_train, Y_train[subject])
+        partial_pred = pd.DataFrame(model.predict(X_test), index=Y_test[subject].index, columns=subject)
+        Y_pred[subject] = partial_pred
+        
+        
+    return Y_pred
+  
+
+def fit_and_predict_model(model, XY, X_labels, Y_labels, train_size=0.2):
+    ''' Split in train and test, train model and run predictions for all output vectors '''
+    train, test = train_test_split(XY, random_state=0, train_size=train_size)
+    X_train = train[X_labels]
+    Y_train = train[Y_labels]
+    X_test = test[X_labels]
+    Y_test = test[Y_labels]
+    
+    Y_pred = train_and_predict(model, X_train, Y_train, X_test, Y_test)
+
+    # # Quantize prediction to nearest .5
+    # Y_pred = (Y_pred * 2).round(0) / 2
+
+    return X_test, Y_test, Y_pred
+
+def fit_and_predict_model_loo(model, XY, X_labels, Y_labels):
+    ''' Fit model on N-1 samples and Predict last sample '''
+    
+    loo = LeaveOneOut()
+    
+    X = XY[X_labels]
+    Y = XY[Y_labels]
+    
+    nsplits = loo.get_n_splits(X)
+    
+    Y = XY[Y_labels]
+    
+    Y_pred = pd.DataFrame(columns=Y.columns)
+    split = 1
+    
+    for train_idx, test_idx in loo.split(X):
+        X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+        Y_train, Y_test = Y.iloc[train_idx], Y.iloc[test_idx]
+        
+        Y_pred_sample = train_and_predict(model, X_train, Y_train, X_test, Y_test)
+        
+        Y_pred = pd.concat([Y_pred, Y_pred_sample])
+        
+        split += 1
+        
+    return Y_pred
+
+def plot_real_vs_predicted(Y_real, Y_pred):
+    f = plt.figure(figsize=[12,8])
+    plt.title("Real vs Predicted Scatter")
+
+    plt.plot([0,10], [0,10], color="green", alpha=0.3)
+    plt.plot([0,10], [5,5], color="red", alpha=0.3)
+
+    plt.xlabel("Real Grade")
+    plt.ylabel("Predicted Grade")
+    
+    _x = Y_real.stack()
+    _y = Y_pred.stack()[_x.index]
+
+    plt.scatter(_x.ravel(), _y.ravel(), alpha=0.5, marker=".")
+
+    f = plt.figure(figsize=[12,3])
+    plt.title("Histogram")
+
+    plt.hist(Y_real.stack(), alpha=0.4, color="blue", bins=20, range=[0,10], density=True)
+    plt.hist(Y_pred.stack(), alpha=0.4, color="yellow", bins=20, range=[0,10], density=True)
+    
+    plt.legend(['Real Grade', 'Predicted Grade'])
+    
+    
+def prediction_metrics(Y_real, Y_pred, verbose=True):
+    err     = (Y_real - Y_pred)
+    bias    = err.mean().mean()
+    err_std = err.std().mean()
+    mae     = (err).abs().mean().mean()
+    rmse    = np.sqrt((err*err).mean()).mean()    
+    
+    if verbose:
+        print("BIAS     ", bias)
+        print("ERR STD  ", err_std)
+        print("MAE      ", mae)
+        print("RMSE     ", rmse)
+
+    return bias, err_std, mae, rmse
+
+
+############# Modelo Baseline: Predicción de media
+
+
+# dataset = cs_grades_all
+# labels_x = s1_info_tag
+# labels_y = s2_info_tag
+
+dataset = ma_grades_all
+labels_x = s1_mates_tag
+labels_y = s2_mates_tag
+
+# dataset = lw_grades_all
+# labels_x = s1_dret_tag
+# labels_y = s2_dret_tag
+
+item_mean = dataset[labels_y].mean()
+user_mean = dataset[labels_x].mean(axis=1)
+
+def predict_ss_mean_item(sid, subj):
+    return item_mean[subj]
+
+def predict_ss_mean_user(sid, subj):
+    return user_mean[sid]
+    
+def predict_row(row, fn):
+    sid = row.name
+    pred_row = pd.Series(index=row.index)
+    for subj, _ in row.iteritems():
+        pred_row[subj] = fn(sid, subj)
+        
+    return pred_row
+
+Y_pred = dataset[labels_y].apply(lambda x: predict_row(x, predict_ss_mean_item), axis=1)
+print("Item Mean")
+prediction_metrics(dataset[labels_y], Y_pred)
+
+print("")
+
+Y_pred = dataset[labels_y].apply(lambda x: predict_row(x, predict_ss_mean_user), axis=1)
+print("User Mean")
+prediction_metrics(dataset[labels_y], Y_pred);
+
+################ Evaluacion de varios modelos
+
+# Set dataset to use here
+dataset       = ma_grades_fill
+dataset_clean = ma_grades
+dataset_all   = ma_grades_all
+x_labels      = s1_mates_tag
+y_labels      = s2_mates_tag
+X_real    = raw_grades_mates[x_labels]
+Y_real    = raw_grades_mates[y_labels]
+
+# dataset       = law_grades_fill
+# dataset_clean = law_grades
+# dataset_all   = law_grades_all
+# x_labels      = s1_dret_tag
+# y_labels      = s2_dret_tag
+# X_real    = raw_grades_dret[x_labels]
+# Y_real    = raw_grades_dret[y_labels]
+
+
+############### Linear: LR Weighted Correlation
+
+
+
+corrs = dataset_clean[x_labels + y_labels].corr()[x_labels]
+
+def predict_student_subject(sid, subj):
+    pred = 0
+    tw = 0
+    
+    for s, c in corrs.loc[subj].iteritems():
+        g = X_real.loc[sid][s]
+        
+        if np.isnan(g):
+            continue
+            
+        w = g * c
+        pred += w
+        tw += c
+
+    if tw == 0:
+        return np.nan
+    return pred / tw
+
+def predict_row(row):
+    sid = row.name
+    pred_row = pd.Series(index=row.index)
+    for subj, _ in row.iteritems():
+        pred_row[subj] = predict_student_subject(sid, subj)
+        
+    return pred_row
+
+corr_pred = Y_real.apply(predict_row, axis=1)
+
+prediction_metrics(Y_real, corr_pred)
+plot_real_vs_predicted(Y_real, corr_pred)
+
+########### KNeighbors
+
+from sklearn.neighbors import KNeighborsRegressor
+
+knn = KNeighborsRegressor(weights="distance", n_jobs=-1)
+knn_pred = fit_and_predict_model_loo(knn, dataset, x_labels, y_labels)
+
+prediction_metrics(Y_real, knn_pred)
+plot_real_vs_predicted(Y_real, knn_pred)
+
+########## Bayesian Ridge
+
+
+
+
+
