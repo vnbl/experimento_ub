@@ -1,6 +1,6 @@
 import pandas as pd #Para manipular datasets
 import numpy as np #Funciones matematicas de manera vectorial
-import random as rand 
+import random as rand
 import sklearn.metrics as metrics # Para utilizar algoritmos de machine learning. Metrics: utiliza m'etricas de desempeno, funciones de score, etc. de forma a cuantificar la calidad de predicciones
 import seaborn as sns # Visualizacion de datos
 
@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 sns.set_style("whitegrid")
 sns.set_context("notebook", font_scale=1.3)
+
+#Pruebas
 
 s1_info = [364288, 364289, 364290, 364291, 364292, 364293, 364294, 364298, 364299, 364301]
 s1_info_tag = ['P1', 'DDB', 'IO', 'ALGE', 'CAL', 'MD', 'FIS', 'ALGO', 'P2', 'ED']
@@ -19,7 +21,7 @@ s3_info_tag = ['IA', 'SO2', 'TNUI', 'VA', 'XAR', 'BD', 'FHIC', 'GiVD', 'LIL', 'S
 
 
 #concatenacion de datos
-info_ids = s1_info + s2_info + s3_info 
+info_ids = s1_info + s2_info + s3_info
 info_tags = s1_info_tag + s2_info_tag + s3_info_tag
 
 
@@ -60,7 +62,7 @@ edu_tags    = s1_edu_tag + s2_edu_tag
 ##### Importamos los datos
 
 raw_grades_mates = pd.read_csv("data/grades_mates_2010-2016.csv", index_col=0) #index_col esta asociado a la primera columna, que es de
-raw_grades_info  = pd.read_csv("data/grades_info_2011-2017.csv", index_col=0) # el id_alumno. 
+raw_grades_info  = pd.read_csv("data/grades_info_2011-2017.csv", index_col=0) # el id_alumno.
 raw_grades_edu   = pd.read_csv("data/grades_edu_2009-2014.csv", index_col=0)
 raw_grades_dret  = pd.read_csv("data/grades_dret_2009-2015.csv", index_col=0)
 
@@ -100,7 +102,7 @@ def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, gt=11, fill="row"):
 #### ESTO NO NOS GUSTA.
     if fill != 'row':
         # Fill with column mean
-        _grades_fill = _grades.fillna(_grades.mean().round(1)) #que onda este redondeo tekk 
+        _grades_fill = _grades.fillna(_grades.mean().round(1)) #que onda este redondeo tekk
 
     else:
         # Fill with row mean
@@ -190,22 +192,22 @@ ax1.add_patch(
 
 from sklearn.model_selection import train_test_split #https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
 from sklearn.model_selection import LeaveOneOut # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.LeaveOneOut.html?highlight=leaveoneout
-from sklearn import metrics 
+from sklearn import metrics
 
 def train_and_predict(model, X_train, Y_train, X_test, Y_test):
     columns = Y_test.columns
-    
+
     Y_pred = pd.DataFrame(index=Y_test.index)
-    
+
     for subject in columns:
         subject = [subject]
         model.fit(X_train, Y_train[subject])
         partial_pred = pd.DataFrame(model.predict(X_test), index=Y_test[subject].index, columns=subject)
         Y_pred[subject] = partial_pred
-        
-        
+
+
     return Y_pred
-  
+
 
 def fit_and_predict_model(model, XY, X_labels, Y_labels, train_size=0.2):
     ''' Split in train and test, train model and run predictions for all output vectors '''
@@ -214,7 +216,7 @@ def fit_and_predict_model(model, XY, X_labels, Y_labels, train_size=0.2):
     Y_train = train[Y_labels]
     X_test = test[X_labels]
     Y_test = test[Y_labels]
-    
+
     Y_pred = train_and_predict(model, X_train, Y_train, X_test, Y_test)
 
     # # Quantize prediction to nearest .5
@@ -224,29 +226,29 @@ def fit_and_predict_model(model, XY, X_labels, Y_labels, train_size=0.2):
 
 def fit_and_predict_model_loo(model, XY, X_labels, Y_labels):
     ''' Fit model on N-1 samples and Predict last sample '''
-    
+
     loo = LeaveOneOut()
-    
+
     X = XY[X_labels]
     Y = XY[Y_labels]
-    
+
     nsplits = loo.get_n_splits(X)
-    
+
     Y = XY[Y_labels]
-    
+
     Y_pred = pd.DataFrame(columns=Y.columns)
     split = 1
-    
+
     for train_idx, test_idx in loo.split(X):
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         Y_train, Y_test = Y.iloc[train_idx], Y.iloc[test_idx]
-        
+
         Y_pred_sample = train_and_predict(model, X_train, Y_train, X_test, Y_test)
-        
+
         Y_pred = pd.concat([Y_pred, Y_pred_sample])
-        
+
         split += 1
-        
+
     return Y_pred
 
 def plot_real_vs_predicted(Y_real, Y_pred):
@@ -258,7 +260,7 @@ def plot_real_vs_predicted(Y_real, Y_pred):
 
     plt.xlabel("Real Grade")
     plt.ylabel("Predicted Grade")
-    
+
     _x = Y_real.stack()
     _y = Y_pred.stack()[_x.index]
 
@@ -269,17 +271,17 @@ def plot_real_vs_predicted(Y_real, Y_pred):
 
     plt.hist(Y_real.stack(), alpha=0.4, color="blue", bins=20, range=[0,10], density=True)
     plt.hist(Y_pred.stack(), alpha=0.4, color="yellow", bins=20, range=[0,10], density=True)
-    
+
     plt.legend(['Real Grade', 'Predicted Grade'])
-    
-    
+
+
 def prediction_metrics(Y_real, Y_pred, verbose=True):
     err     = (Y_real - Y_pred)
     bias    = err.mean().mean()
     err_std = err.std().mean()
     mae     = (err).abs().mean().mean()
-    rmse    = np.sqrt((err*err).mean()).mean()    
-    
+    rmse    = np.sqrt((err*err).mean()).mean()
+
     if verbose:
         print("BIAS     ", bias)
         print("ERR STD  ", err_std)
@@ -312,13 +314,13 @@ def predict_ss_mean_item(sid, subj):
 
 def predict_ss_mean_user(sid, subj):
     return user_mean[sid]
-    
+
 def predict_row(row, fn):
     sid = row.name
     pred_row = pd.Series(index=row.index)
     for subj, _ in row.iteritems():
         pred_row[subj] = fn(sid, subj)
-        
+
     return pred_row
 
 Y_pred = dataset[labels_y].apply(lambda x: predict_row(x, predict_ss_mean_item), axis=1)
@@ -360,13 +362,13 @@ corrs = dataset_clean[x_labels + y_labels].corr()[x_labels]
 def predict_student_subject(sid, subj):
     pred = 0
     tw = 0
-    
+
     for s, c in corrs.loc[subj].iteritems():
         g = X_real.loc[sid][s]
-        
+
         if np.isnan(g):
             continue
-            
+
         w = g * c
         pred += w
         tw += c
@@ -380,7 +382,7 @@ def predict_row(row):
     pred_row = pd.Series(index=row.index)
     for subj, _ in row.iteritems():
         pred_row[subj] = predict_student_subject(sid, subj)
-        
+
     return pred_row
 
 corr_pred = Y_real.apply(predict_row, axis=1)
@@ -399,8 +401,3 @@ prediction_metrics(Y_real, knn_pred)
 plot_real_vs_predicted(Y_real, knn_pred)
 
 ########## Bayesian Ridge
-
-
-
-
-
