@@ -1,8 +1,8 @@
-import pandas as pd
-import numpy as np
-import random as rand
-import sklearn.metrics as metrics
-import seaborn as sns
+import pandas as pd #Para manipular datasets
+import numpy as np #Funciones matematicas de manera vectorial
+import random as rand 
+import sklearn.metrics as metrics # Para utilizar algoritmos de machine learning. Metrics: utiliza m'etricas de desempeno, funciones de score, etc. de forma a cuantificar la calidad de predicciones
+import seaborn as sns # Visualizacion de datos
 
 # matplotlib inline
 import matplotlib.pyplot as plt
@@ -17,8 +17,12 @@ s2_info_tag = ['ELEC', 'AA', 'DS', 'EC', 'ICC', 'EMP', 'PIE', 'PAE', 'PIS', 'SO1
 s3_info = [364314, 364308, 364322, 364315, 364309, 364311, 364323, 364328, 364310, 364312]
 s3_info_tag = ['IA', 'SO2', 'TNUI', 'VA', 'XAR', 'BD', 'FHIC', 'GiVD', 'LIL', 'SWD']
 
-info_ids = s1_info + s2_info + s3_info
+
+#concatenacion de datos
+info_ids = s1_info + s2_info + s3_info 
 info_tags = s1_info_tag + s2_info_tag + s3_info_tag
+
+
 
 # Matematica
 s1_mates = [360142, 360140, 360136, 360138, 360134, 360135, 360139, 360143, 360137, 360141]
@@ -42,6 +46,8 @@ s3_dret_tag  = ['DR', 'PST', 'CAA', 'DEM', 'DTS', 'DPP', 'DS', 'BPU']
 dret_ids     = s1_dret + s2_dret + s3_dret
 dret_tags    = s1_dret_tag + s2_dret_tag + s3_dret_tag
 
+
+
 # Educacion
 s1_edu       = [361020, 361032, 361039, 361041, 361044, 361046, 361047, 361049, 361094]
 s1_edu_tag   = ['PIP', 'PED', 'PDAA', 'AT', 'SOC', 'LCAT', 'LESP', 'DIDA', 'LENG']
@@ -53,29 +59,36 @@ edu_tags    = s1_edu_tag + s2_edu_tag
 
 ##### Importamos los datos
 
-raw_grades_mates = pd.read_csv("data/grades_mates_2010-2016.csv", index_col=0)
-raw_grades_info  = pd.read_csv("data/grades_info_2011-2017.csv", index_col=0)
+raw_grades_mates = pd.read_csv("data/grades_mates_2010-2016.csv", index_col=0) #index_col esta asociado a la primera columna, que es de
+raw_grades_info  = pd.read_csv("data/grades_info_2011-2017.csv", index_col=0) # el id_alumno. 
 raw_grades_edu   = pd.read_csv("data/grades_edu_2009-2014.csv", index_col=0)
 raw_grades_dret  = pd.read_csv("data/grades_dret_2009-2015.csv", index_col=0)
 
+print("Notas")
+print(raw_grades_mates)
+print("Fin Notas")
+
 ##### Filtramos los datos
 
-def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, fill="row"):
+def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, gt=11, fill="row"):
     ''' Pivots raw datasets and cleans / fills missing data, returns tuple of filtered, all and filled'''
     _grades = grades.copy()
     _grades_all = _grades.copy() #si usamos el método tradicional para asignar, se modifica el dato original, por eso usamos copy()
 
     # Separamos por anho, aplicamos threshold, unimos
     _grades_first = _grades[t1]
-    _grades_first = _grades_first.dropna(thresh=th1)
+    _grades_first = _grades_first.dropna(thresh=th1) #si hay al menos 8, no echa (este numero parece ser arbitrario)
 
     _grades_second = _grades[t2]
-    _grades_second = _grades_second.dropna(thresh=th2)
+    _grades_second = _grades_second.dropna(thresh=th2) # si hay al menos 7, no echa
 
     _grades_third = _grades[t3]
-    _grades_third = _grades_third.dropna(thresh=th3)
+    _grades_third = _grades_third.dropna(thresh=th3) # no echa, si hay al menos 0 (que siempre hay)
 
-    # # Join back as "inner"
+# Los threshholds difieren aca segun lo que dice en el paper.
+
+
+    # # Join back as "inner" Concatenacion de datos de 1er anho, 2ndo y 3ro FILTRADO
     _grades = _grades_first.join(_grades_second, how="inner").join(_grades_third, how="inner")
 
     print("all samples      ", _grades_all.count().sum())
@@ -83,9 +96,11 @@ def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, fill="row"):
     print("total students   ", _grades_all.shape[0])
     print("sampled students ", _grades.shape[0])
 
+
+#### ESTO NO NOS GUSTA.
     if fill != 'row':
         # Fill with column mean
-        _grades_fill = _grades.fillna(_grades.mean().round(1))
+        _grades_fill = _grades.fillna(_grades.mean().round(1)) #que onda este redondeo tekk 
 
     else:
         # Fill with row mean
@@ -93,6 +108,9 @@ def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, fill="row"):
         _grades_fill = _grades.fillna(_row_mean)
 
     return _grades, _grades_all, _grades_fill
+# _grades = todas las notas habiendo eliminado a los alumnos que no cumplen la condicion del problema
+# _grades_all = todas las notas incluyendo a los alumnos que no cumplen la condicion del problema
+# _grades_fill = datos filtrados, pero con las notas faltantes estimadas con ese round raro.
 
 # Imprimimos los resultados
 
@@ -112,15 +130,19 @@ law_grades, law_grades_all, law_grades_fill = filter_dataset(raw_grades_dret,s1_
 
 #### Exploramos los datos
 
-_ds = ma_grades_all.copy()
+_ds = ma_grades_all.copy() # We can copy a set to another set using the = operator, however copying a set using = operator means that when we change the new set the copied set will also be changed, if you do not want this behaviour then use the copy() method instead of = operator.
 
 # _ds = _ds[s1_mates_tag + s2_mates_tag]
 
 # _ds['mean'] = _ds.mean(axis=1)
 
-_x = _ds.iloc[:,0:10].mean(axis=1)
-_y = _ds.iloc[:,10:20].mean(axis=1)
-_z = _ds.iloc[:,20:30].mean(axis=1)
+_x = _ds.iloc[:,0:10].mean(axis=1) # media primer anho
+_y = _ds.iloc[:,10:20].mean(axis=1) # media segundo anho
+_z = _ds.iloc[:,20:30].mean(axis=1) # media tercer anho
+
+# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.iloc.html
+# https://stackoverflow.com/questions/22149584/what-does-axis-in-pandas-mean#:~:text=mean%20usage%20when%20axis%20is,axis%3D1%20along%20the%20columns
+
 
 
 sns.set_style("white")
@@ -151,7 +173,7 @@ ax1.add_patch(
         (0, 0), 5, 5, color="red", alpha=0.05
     )
 )
-plt.axhspan(0,5, color='red', alpha=0.05)
+#plt.axhspan(0,5, color='red', alpha=0.05) # esta linea coloreaba de rojo el plot de 5 a 10 horizontal
 
 
 # plt.figure(figsize=[7,7])
@@ -166,9 +188,9 @@ plt.axhspan(0,5, color='red', alpha=0.05)
 
 ############ Funciones de ayuda
 
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import LeaveOneOut
-from sklearn import metrics
+from sklearn.model_selection import train_test_split #https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
+from sklearn.model_selection import LeaveOneOut # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.LeaveOneOut.html?highlight=leaveoneout
+from sklearn import metrics 
 
 def train_and_predict(model, X_train, Y_train, X_test, Y_test):
     columns = Y_test.columns
