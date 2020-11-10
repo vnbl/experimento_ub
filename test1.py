@@ -91,6 +91,7 @@ def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, gt=11, fill="row"):
 
 
     # # Join back as "inner" Concatenacion de datos de 1er anho, 2ndo y 3ro FILTRADO
+    ## join(how = inner) > interseccion entre datos de alumnos de primer, segundo y tercer semestre (solo une los que tienen datos en los 3 semestres)
     _grades = _grades_first.join(_grades_second, how="inner").join(_grades_third, how="inner")
 
     print("all samples      ", _grades_all.count().sum())
@@ -106,7 +107,9 @@ def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, gt=11, fill="row"):
 
     else:
         # Fill with row mean
-        _row_mean = pd.DataFrame({col: _grades.mean(axis=1).round(1) for col in _grades.columns})
+        # Axis 1= fila, axis 0 = columna 
+        ######## ESTA FUNCION NO ENTENDEMOS BIEN, ESTUDIARLA MAS 
+        _row_mean = pd.DataFrame({col: _grades.mean(axis=1).round(1) for col in _grades.columns}) # for abreviado?
         _grades_fill = _grades.fillna(_row_mean)
 
     return _grades, _grades_all, _grades_fill
@@ -195,12 +198,19 @@ from sklearn.model_selection import LeaveOneOut # https://scikit-learn.org/stabl
 from sklearn import metrics
 
 def train_and_predict(model, X_train, Y_train, X_test, Y_test):
-    columns = Y_test.columns
+    columns = Y_test.columns # pandas.core.indexes.base.Index
+#    print ("aca empieza")
+#    print(type(Y_test))
+#    print ("aca termina")
+    Y_pred = pd.DataFrame(index=Y_test.index) #Y_pred esta inicialmente vacio, tiene dimension n' = cantidad de alumnos del set de pruebas.
 
-    Y_pred = pd.DataFrame(index=Y_test.index)
 
+# Usar for suele ser lento para entrenar, mejor usar algo tipo producto vectorial.
+    # numpy.dot en vez de for.
     for subject in columns:
+        #print(type(subject))
         subject = [subject]
+        #print(type(subject))
         model.fit(X_train, Y_train[subject])
         partial_pred = pd.DataFrame(model.predict(X_test), index=Y_test[subject].index, columns=subject)
         Y_pred[subject] = partial_pred
@@ -209,7 +219,7 @@ def train_and_predict(model, X_train, Y_train, X_test, Y_test):
     return Y_pred
 
 
-def fit_and_predict_model(model, XY, X_labels, Y_labels, train_size=0.2):
+def fit_and_predict_model(model, XY, X_labels, Y_labels, train_size=0.2): #train_size= proporcion del data set
     ''' Split in train and test, train model and run predictions for all output vectors '''
     train, test = train_test_split(XY, random_state=0, train_size=train_size)
     X_train = train[X_labels]
@@ -222,7 +232,7 @@ def fit_and_predict_model(model, XY, X_labels, Y_labels, train_size=0.2):
     # # Quantize prediction to nearest .5
     # Y_pred = (Y_pred * 2).round(0) / 2
 
-    return X_test, Y_test, Y_pred
+    return X_test, Y_test, Y_pred 
 
 def fit_and_predict_model_loo(model, XY, X_labels, Y_labels):
     ''' Fit model on N-1 samples and Predict last sample '''
@@ -232,24 +242,33 @@ def fit_and_predict_model_loo(model, XY, X_labels, Y_labels):
     X = XY[X_labels]
     Y = XY[Y_labels]
 
-    nsplits = loo.get_n_splits(X)
-
-    Y = XY[Y_labels]
+    #nsplits = loo.get_n_splits(X)
+#    print(X.shape)
+#    print("empieza nsplits")
+#    print(nsplits)
+    #Y = XY[Y_labels]
 
     Y_pred = pd.DataFrame(columns=Y.columns)
     split = 1
 
+#    matriz = [loo.split(X)]
+#    print(matriz)
+#   no anda
+    
     for train_idx, test_idx in loo.split(X):
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         Y_train, Y_test = Y.iloc[train_idx], Y.iloc[test_idx]
 
+        #print(str(X_train) + str(" ") + str(X_test))
         Y_pred_sample = train_and_predict(model, X_train, Y_train, X_test, Y_test)
 
         Y_pred = pd.concat([Y_pred, Y_pred_sample])
 
         split += 1
-
+        #print(split)
     return Y_pred
+
+
 
 def plot_real_vs_predicted(Y_real, Y_pred):
     f = plt.figure(figsize=[12,8])
@@ -302,12 +321,12 @@ dataset = ma_grades_all
 labels_x = s1_mates_tag
 labels_y = s2_mates_tag
 
-# dataset = lw_grades_all
-# labels_x = s1_dret_tag
-# labels_y = s2_dret_tag
+#dataset = law_grades_all
+#labels_x = s1_dret_tag
+#labels_y = s2_dret_tag
 
-item_mean = dataset[labels_y].mean()
-user_mean = dataset[labels_x].mean(axis=1)
+item_mean = dataset[labels_y].mean() 
+user_mean = dataset[labels_x].mean(axis=1) #media de la fila
 
 def predict_ss_mean_item(sid, subj):
     return item_mean[subj]
@@ -335,7 +354,7 @@ prediction_metrics(dataset[labels_y], Y_pred);
 
 ################ Evaluacion de varios modelos
 
-# Set dataset to use here
+ #Set dataset to use here
 dataset       = ma_grades_fill
 dataset_clean = ma_grades
 dataset_all   = ma_grades_all
@@ -344,13 +363,13 @@ y_labels      = s2_mates_tag
 X_real    = raw_grades_mates[x_labels]
 Y_real    = raw_grades_mates[y_labels]
 
-# dataset       = law_grades_fill
-# dataset_clean = law_grades
-# dataset_all   = law_grades_all
-# x_labels      = s1_dret_tag
-# y_labels      = s2_dret_tag
-# X_real    = raw_grades_dret[x_labels]
-# Y_real    = raw_grades_dret[y_labels]
+#dataset       = law_grades_fill
+#dataset_clean = law_grades
+#dataset_all   = law_grades_all
+#x_labels      = s1_dret_tag
+#y_labels      = s2_dret_tag
+#X_real    = raw_grades_dret[x_labels]
+#Y_real    = raw_grades_dret[y_labels]
 
 
 ############### Linear: LR Weighted Correlation
@@ -359,6 +378,14 @@ Y_real    = raw_grades_mates[y_labels]
 
 corrs = dataset_clean[x_labels + y_labels].corr()[x_labels]
 
+#print("aaaa")
+#print(x_labels)
+#print(y_labels)
+#print(x_labels + y_labels)
+#print(corrs)
+
+
+#este no entiendo un ovo
 def predict_student_subject(sid, subj):
     pred = 0
     tw = 0
