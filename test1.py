@@ -72,6 +72,8 @@ print("Fin Notas")
 
 ##### Filtramos los datos
 
+####### hacer ya una base de datos limpia y usar esa.
+
 def filter_dataset(grades, t1, t2, t3, th1=8, th2=7, th3=0, gt=11, fill="row"):
     ''' Pivots raw datasets and cleans / fills missing data, returns tuple of filtered, all and filled'''
     _grades = grades.copy()
@@ -125,7 +127,7 @@ print("Matematiques")
 ma_grades, ma_grades_all, ma_grades_fill = filter_dataset(raw_grades_mates,s1_mates_tag, s2_mates_tag, s3_mates_tag, fill="col")
 
 print("\nInformatica")
-cs_grades, cs_grades_all, cs_grades_fill = filter_dataset(raw_grades_info,s1_info_tag, s2_info_tag, s3_info_tag, fill="col")
+info_grades, info_grades_all, info_grades_fill = filter_dataset(raw_grades_info,s1_info_tag, s2_info_tag, s3_info_tag, fill="col")
 
 print("\nEducacion")
 edu_grades, edu_grades_all, edu_grades_fill = filter_dataset(raw_grades_edu,s1_edu_tag, s2_edu_tag, [], fill="col")
@@ -158,6 +160,7 @@ ax1 = f.add_subplot(111, aspect='equal')
 plt.ylim([0,10])
 plt.xlim([0,10])
 
+plt.title("Grafico de distribucion (antes de hacer nada)")
 plt.xlabel("Mean grade First year")
 plt.ylabel("Mean grade Second / Third year")
 
@@ -197,6 +200,8 @@ from sklearn.model_selection import train_test_split #https://scikit-learn.org/s
 from sklearn.model_selection import LeaveOneOut # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.LeaveOneOut.html?highlight=leaveoneout
 from sklearn import metrics
 
+
+
 def train_and_predict(model, X_train, Y_train, X_test, Y_test):
     columns = Y_test.columns # pandas.core.indexes.base.Index
 #    print ("aca empieza")
@@ -204,7 +209,7 @@ def train_and_predict(model, X_train, Y_train, X_test, Y_test):
 #    print ("aca termina")
     Y_pred = pd.DataFrame(index=Y_test.index) #Y_pred esta inicialmente vacio, tiene dimension n' = cantidad de alumnos del set de pruebas.
 
-
+    bandera = 0
 # Usar for suele ser lento para entrenar, mejor usar algo tipo producto vectorial.
     # numpy.dot en vez de for.
     for subject in columns:
@@ -215,7 +220,9 @@ def train_and_predict(model, X_train, Y_train, X_test, Y_test):
         partial_pred = pd.DataFrame(model.predict(X_test), index=Y_test[subject].index, columns=subject)
         Y_pred[subject] = partial_pred
 
-
+        bandera += 1
+        print(bandera)
+        
     return Y_pred
 
 
@@ -313,17 +320,17 @@ def prediction_metrics(Y_real, Y_pred, verbose=True):
 ############# Modelo Baseline: Predicción de media
 
 
-# dataset = cs_grades_all
-# labels_x = s1_info_tag
-# labels_y = s2_info_tag
+#dataset = info_grades_all
+#labels_x = s1_info_tag
+#labels_y = s2_info_tag
 
-dataset = ma_grades_all
-labels_x = s1_mates_tag
-labels_y = s2_mates_tag
+#dataset = ma_grades_all
+#labels_x = s1_mates_tag
+#labels_y = s2_mates_tag
 
-#dataset = law_grades_all
-#labels_x = s1_dret_tag
-#labels_y = s2_dret_tag
+dataset = law_grades_all
+labels_x = s1_dret_tag
+labels_y = s2_dret_tag
 
 item_mean = dataset[labels_y].mean() 
 user_mean = dataset[labels_x].mean(axis=1) #media de la fila
@@ -355,21 +362,32 @@ prediction_metrics(dataset[labels_y], Y_pred);
 ################ Evaluacion de varios modelos
 
  #Set dataset to use here
-dataset       = ma_grades_fill
-dataset_clean = ma_grades
-dataset_all   = ma_grades_all
-x_labels      = s1_mates_tag
-y_labels      = s2_mates_tag
-X_real    = raw_grades_mates[x_labels]
-Y_real    = raw_grades_mates[y_labels]
+#dataset       = ma_grades_fill
+#dataset_clean = ma_grades
+#dataset_all   = ma_grades_all
+#x_labels      = s1_mates_tag #primer semestre
+#y_labels      = s2_mates_tag #segundo semestre
+#X_real    = raw_grades_mates[x_labels]
+#Y_real    = raw_grades_mates[y_labels]
 
-#dataset       = law_grades_fill
-#dataset_clean = law_grades
-#dataset_all   = law_grades_all
-#x_labels      = s1_dret_tag
-#y_labels      = s2_dret_tag
-#X_real    = raw_grades_dret[x_labels]
-#Y_real    = raw_grades_dret[y_labels]
+
+#dataset       = info_grades_fill
+#dataset_clean = info_grades
+#dataset_all   = info_grades_all
+#x_labels      = s1_info_tag #primer semestre
+#y_labels      = s2_info_tag #segundo semestre
+#X_real    = raw_grades_info[x_labels]
+#Y_real    = raw_grades_info[y_labels]
+
+
+
+dataset       = law_grades_fill
+dataset_clean = law_grades
+dataset_all   = law_grades_all
+x_labels      = s1_dret_tag
+y_labels      = s2_dret_tag
+X_real    = raw_grades_dret[x_labels]
+Y_real    = raw_grades_dret[y_labels]
 
 
 ############### Linear: LR Weighted Correlation
@@ -378,11 +396,14 @@ Y_real    = raw_grades_mates[y_labels]
 
 corrs = dataset_clean[x_labels + y_labels].corr()[x_labels]
 
+#print('bbbbbbbb')
+#print(corrs.loc['ADIP'])
+
 #print("aaaa")
-#print(x_labels)
-#print(y_labels)
+print(x_labels)
+print(y_labels)
 #print(x_labels + y_labels)
-#print(corrs)
+print(corrs)
 
 
 #este no entiendo un ovo
@@ -414,17 +435,129 @@ def predict_row(row):
 
 corr_pred = Y_real.apply(predict_row, axis=1)
 
-prediction_metrics(Y_real, corr_pred)
-plot_real_vs_predicted(Y_real, corr_pred)
+#prediction_metrics(Y_real, corr_pred)
+#plot_real_vs_predicted(Y_real, corr_pred)
 
 ########### KNeighbors
 
-from sklearn.neighbors import KNeighborsRegressor
+######  EXPLORAR COMO MANIPULAR LA LIBRERIA KNEIGHBORS PARA MEJORES RESULTADOS
+#
+#from sklearn.neighbors import KNeighborsRegressor
+#
+#knn = KNeighborsRegressor(weights="distance", n_jobs=-1)
+#knn_pred = fit_and_predict_model_loo(knn, dataset, x_labels, y_labels)
+#
+#prediction_metrics(Y_real, knn_pred)
+#plot_real_vs_predicted(Y_real, knn_pred)
 
-knn = KNeighborsRegressor(weights="distance", n_jobs=-1)
-knn_pred = fit_and_predict_model_loo(knn, dataset, x_labels, y_labels)
+########### Bayesian Ridge
+#
+#from sklearn import linear_model
+#
+#br = linear_model.BayesianRidge()
+#br_pred = fit_and_predict_model_loo(br, dataset, x_labels, y_labels)
+#
+#prediction_metrics(Y_real, br_pred)
+#plot_real_vs_predicted(Y_real, br_pred)
+#sns.set_style("white")
+#sns.set_context("poster", font_scale=1.1)
+#
+#_x = Y_real.stack()
+#_y = br_pred.stack()[_x.index]
+#
+#
+#f = plt.figure(figsize=[10,6])
+#ax1 = f.add_subplot(111, aspect='equal')
 
-prediction_metrics(Y_real, knn_pred)
-plot_real_vs_predicted(Y_real, knn_pred)
+# plt.axhspan(0,5, color="red", alpha=0.1)
+#plt.xlim(0,10)
+#plt.ylim(0,10)
 
-########## Bayesian Ridge
+# ax1.add_patch(patches.Rectangle((0, 0), 5, 5, color="green", alpha=0.05))
+# ax1.add_patch(patches.Rectangle((5, 5), 5, 5, color="green", alpha=0.05))
+# ax1.add_patch(patches.Rectangle((5, 0), 5, 5, color="red", alpha=0.05))
+# ax1.add_patch(patches.Rectangle((0, 5), 5, 5, color="red", alpha=0.05))
+#
+#marker_alpha = 0.6
+#
+#plt.scatter(_x.where(_x < 5), _y.where(_y >= 5), marker=".", color="#c03d3e", alpha=marker_alpha)
+#plt.scatter(_x.where(_x < 5), _y.where(_y < 5), marker=".", color="#3a923a", alpha=marker_alpha)
+#plt.scatter(_x.where(_x >= 5), _y.where(_y >= 5), marker=".", color="#3a923a", alpha=marker_alpha)
+#plt.scatter(_x.where(_x >= 5), _y.where(_y < 5), marker=".", color="#c03d3e", alpha=marker_alpha)
+
+# plt.scatter(_x[_x < 5], _y[_x < 5], marker=".", color="red", alpha=0.5)
+# plt.scatter(_x[_x >= 5], _y[_x >= 5], marker=".", color="green", alpha=0.5)
+#
+#sns.regplot(_x,_y, marker=".", scatter_kws={'alpha':0}, line_kws={'color':"black", 'alpha':.5})
+
+# plt.plot([0,10],[0,10], color="black", alpha=0.3)
+# plt.plot([0,10],[5,5], color="black", alpha=0.1)
+# plt.plot([5,5],[0,10], color="black", alpha=0.1)
+#
+#plt.xlabel("Ground truth")
+#plt.ylabel("BR Prediction")
+#
+#plt.xticks(range(0,11,2))
+
+# plt.figure(figsize=[7,7])
+# _x.hist(density=True, range=[0,10], ec="black", fill=False)
+# _y.hist(density=True, range=[0,10], ec="black", fc="black", alpha=0.1)
+# plt.ylabel("Density")
+# plt.xlabel("Grade bin")
+# plt.grid(False)
+# _y[_x < 5 & _y >= 5].count()
+
+# print "valid pass", _x.where(_x >= 5).where(_y >= 5).count()
+# print "valid fail", _x.where(_x < 5).where(_y < 5).count()
+
+# print "total", _x.count()
+
+# sns.despine()
+
+# plt.figure(figsize=[6.75,1])
+# sns.distplot(_y.dropna())
+
+# sns.despine(left=True)
+# plt.yticks([])
+# plt.xticks(rotation=90)
+
+# plt.figure(figsize=[6.75,1])
+# sns.distplot(_x.dropna())
+
+# sns.despine(left=True)
+# plt.yticks([])
+
+# sns.jointplot(_x, _y, marker=".", kind="reg", color="gray", size=7)
+
+# plt.figure(figsize=[2,7])
+# sns.set_style("white")
+# dat = pd.DataFrame([br_pred.stack().ravel(), Y_real.stack().ravel()])
+# dat = dat.transpose()
+# dat.columns = ['pred', 'real']
+# sns.violinplot(x='pred', y='real', data=dat, split=True, orient="v")
+# sns.despine(left=True, bottom=True)
+
+# plt.yticks([])
+
+################## RANDOM FOREST
+#from sklearn.ensemble import RandomForestRegressor
+#
+#rf = RandomForestRegressor()
+#rf_pred  = fit_and_predict_model_loo(rf, dataset, x_labels, y_labels)
+#
+#prediction_metrics(Y_real, rf_pred)
+#plot_real_vs_predicted(Y_real, rf_pred)
+
+############## ADABOOST`
+
+from sklearn.ensemble import AdaBoostRegressor
+
+ada = AdaBoostRegressor()
+ada_pred = fit_and_predict_model_loo(ada, dataset, x_labels, y_labels)
+
+
+
+prediction_metrics(Y_real, ada_pred)
+plot_real_vs_predicted(Y_real, ada_pred)
+
+
