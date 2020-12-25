@@ -362,13 +362,13 @@ prediction_metrics(dataset[labels_y], Y_pred);
 ################ Evaluacion de varios modelos
 
  #Set dataset to use here
-#dataset       = ma_grades_fill
-#dataset_clean = ma_grades
-#dataset_all   = ma_grades_all
-#x_labels      = s1_mates_tag #primer semestre
-#y_labels      = s2_mates_tag #segundo semestre
-#X_real    = raw_grades_mates[x_labels]
-#Y_real    = raw_grades_mates[y_labels]
+dataset       = ma_grades_fill
+dataset_clean = ma_grades
+dataset_all   = ma_grades_all
+x_labels      = s1_mates_tag #primer semestre
+y_labels      = s2_mates_tag #segundo semestre
+X_real    = raw_grades_mates[x_labels]
+Y_real    = raw_grades_mates[y_labels]
 
 
 #dataset       = info_grades_fill
@@ -381,13 +381,13 @@ prediction_metrics(dataset[labels_y], Y_pred);
 
 
 
-dataset       = law_grades_fill
-dataset_clean = law_grades
-dataset_all   = law_grades_all
-x_labels      = s1_dret_tag
-y_labels      = s2_dret_tag
-X_real    = raw_grades_dret[x_labels]
-Y_real    = raw_grades_dret[y_labels]
+# dataset       = law_grades_fill
+# dataset_clean = law_grades
+# dataset_all   = law_grades_all
+# x_labels      = s1_dret_tag
+# y_labels      = s2_dret_tag
+# X_real    = raw_grades_dret[x_labels]
+# Y_real    = raw_grades_dret[y_labels]
 
 
 ############### Linear: LR Weighted Correlation
